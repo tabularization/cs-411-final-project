@@ -20,6 +20,40 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 db.init_app(app)
 
+@app.route('/api/health', methods=['GET'])
+def healthcheck() -> Response:
+    """
+    Health check route to verify the service is running.
+
+    Returns:
+        JSON response indicating the health status of the service.
+    """
+    app.logger.info('Health check')
+    return make_response(jsonify({'status': 'healthy'}), 200)
+
+@app.route('/api/db-check', methods=['GET'])
+def db_check() -> Response:
+    """
+    Route to check if the database connection and meals table are functional.
+
+    Returns:
+        JSON response indicating the database health status.
+    Raises:
+        404 error if there is an issue with the database.
+    """
+    try:
+        app.logger.info("Checking database connection...")
+        check_database_connection()
+        app.logger.info("Database connection is OK.")
+        app.logger.info("Checking if users table exists...")
+        check_table_exists("users")
+        #need to do create a flight table and check if flight table is healthy
+        app.logger.info("users table exists.")
+        return make_response(jsonify({'database_status': 'healthy'}), 200)
+    except Exception as e:
+        return make_response(jsonify({'error': str(e)}), 404)
+
+
 @app.route('/create-account', methods=['POST'])
 def create_account():
     """
