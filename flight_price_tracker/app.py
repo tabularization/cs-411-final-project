@@ -176,7 +176,7 @@ def search_flights():
     """
     Search for flights based on user input and store unique flights.
     
-    Expected JSON Input:
+    Args:
         - origin (str): Origin IATA code
         - destination (str): Destination IATA code
         - departureDate (str): Departure date (YYYY-MM-DD)
@@ -208,86 +208,100 @@ def search_flights():
 def get_all_flights():
     """
     Retrieve all stored flight data from memory.
-    
+
     Returns:
-        JSON response with flight details.
+        JSON response with status and all stored flight details.
     """
-    flights = flight_model.get_flights()
-    return jsonify({'status': 'success', 'flights': flights}), 200
+    try:
+        flights = flight_model.get_flights()
+        return jsonify({'status': 'success', 'flights': flights}), 200
+    except Exception as e:
+        app.logger.error(f"Error retrieving all flights: {e}")
+        return jsonify({'error': 'Failed to retrieve flights'}), 500
+
 
 @app.route('/api/flights/clear', methods=['POST'])
 def clear_flights():
     """
     Clear all stored flight data from memory.
-    
+
     Returns:
         JSON response confirming the operation.
     """
-    flight_model.clear_flights()
-    return jsonify({'status': 'success', 'message': 'All flights have been cleared'}), 200
+    try:
+        flight_model.clear_flights()
+        return jsonify({'status': 'success', 'message': 'All flights have been cleared'}), 200
+    except Exception as e:
+        app.logger.error(f"Error clearing flights: {e}")
+        return jsonify({'error': 'Failed to clear flights'}), 500
+
 
 @app.route('/api/flights/airline/<airline_code>', methods=['GET'])
 def get_flights_by_airline(airline_code):
     """
-    Retrieve flights from a specific airline.
-    
+    Retrieve flights filtered by airline code.
+
     Args:
         airline_code (str): IATA code of the airline.
-    
+
     Returns:
-        JSON response with filtered flight details.
+        JSON response with status and flights matching the airline code.
     """
-    app.logger.info(f"Retrieving flights for airline: {airline_code}")
-    filtered_flights = [
-        flight for flight in flight_model.get_flights()
-        if flight['airline'] == airline_code.upper()
-    ]
-    return jsonify({'status': 'success', 'flights': filtered_flights}), 200
+    try:
+        app.logger.info(f"Retrieving flights for airline: {airline_code}")
+        filtered_flights = flight_model.filter_by_airline(airline_code)
+        return jsonify({'status': 'success', 'flights': filtered_flights}), 200
+    except Exception as e:
+        app.logger.error(f"Error retrieving flights by airline: {e}")
+        return jsonify({'error': 'Failed to retrieve flights by airline'}), 500
+
 
 @app.route('/api/flights/price', methods=['GET'])
 def get_flights_by_price():
     """
     Retrieve flights within a specific price range.
-    
-    Query Parameters:
-        - min (float): Minimum price
-        - max (float): Maximum price
-    
+
+    Args:
+        min (float): Minimum price in USD.
+        max (float): Maximum price in USD.
+
     Returns:
-        JSON response with filtered flight details.
+        JSON response with status and flights in the price range.
     """
-    min_price = request.args.get('min', type=float)
-    max_price = request.args.get('max', type=float)
-    
-    app.logger.info(f"Retrieving flights with price between {min_price} and {max_price}")
-    
-    if min_price is None or max_price is None:
-        app.logger.warning("Missing min or max price parameters")
-        return jsonify({'error': 'min and max price parameters are required'}), 400
-    
-    filtered_flights = [
-        flight for flight in flight_model.get_flights()
-        if min_price <= float(flight['price'].split()[0]) <= max_price
-    ]
-    return jsonify({'status': 'success', 'flights': filtered_flights}), 200
+    try:
+        min_price = request.args.get('min', type=float)
+        max_price = request.args.get('max', type=float)
+
+        if min_price is None or max_price is None:
+            app.logger.warning("Missing min or max price parameters")
+            return jsonify({'error': 'min and max price parameters are required'}), 400
+
+        app.logger.info(f"Retrieving flights with price between {min_price} and {max_price}")
+        filtered_flights = flight_model.filter_by_price_range(min_price, max_price)
+        return jsonify({'status': 'success', 'flights': filtered_flights}), 200
+    except Exception as e:
+        app.logger.error(f"Error retrieving flights by price: {e}")
+        return jsonify({'error': 'Failed to retrieve flights by price range'}), 500
+
 
 @app.route('/api/flights/origin/<origin_code>', methods=['GET'])
 def get_flights_by_origin(origin_code):
     """
-    Retrieve flights departing from a specific origin.
-    
+    Retrieve flights filtered by origin airport.
+
     Args:
         origin_code (str): IATA code of the origin airport.
-    
+
     Returns:
-        JSON response with filtered flight details.
+        JSON response with status and flights departing from the origin.
     """
-    app.logger.info(f"Retrieving flights from origin: {origin_code}")
-    filtered_flights = [
-        flight for flight in flight_model.get_flights()
-        if flight['origin'] == origin_code.upper()
-    ]
-    return jsonify({'status': 'success', 'flights': filtered_flights}), 200
+    try:
+        app.logger.info(f"Retrieving flights from origin: {origin_code}")
+        filtered_flights = flight_model.filter_by_origin(origin_code)
+        return jsonify({'status': 'success', 'flights': filtered_flights}), 200
+    except Exception as e:
+        app.logger.error(f"Error retrieving flights by origin: {e}")
+        return jsonify({'error': 'Failed to retrieve flights by origin'}), 500
 
 # Initialize database
 with app.app_context():
