@@ -11,7 +11,7 @@ configure_logger(logger)
 
 
 # load the db path from the environment with a default value
-DB_PATH = os.getenv("DB_PATH", "/app/sql/meal_max.db")
+DB_PATH = os.getenv("DB_PATH", "/app/sql/flight_price_tracker.db")
 
 
 def check_database_connection():
