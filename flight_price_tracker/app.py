@@ -10,7 +10,7 @@ from flight_price_tracker.utils.sql_utils import check_database_connection, chec
 from flight_price_tracker.utils.password_utils import verify_password, generate_salt, hash_password
 
 # ------- Flight API ---------
-from flight_price_tracker.utils.flight_utils import fetch_token, get_cheapest_destinations, extract_flight_details
+from flight_price_tracker.models.flight_model import FlightModel
 
 
 # Load environment variables from .env file
@@ -19,6 +19,9 @@ load_dotenv()
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
 db.init_app(app)
+
+# Initialize the FlightModel
+flight_model = FlightModel()
 
 @app.route('/create-account', methods=['POST'])
 def create_account():
@@ -134,44 +137,138 @@ def update_password():
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
+@app.route('/health', methods=['GET'])
+def health_check():
+    """
+    Health Check Route to verify that the app is running.
+    
+    Returns:
+        JSON response indicating the status of the application.
+    """
+    app.logger.info("Health check requested")
+    return jsonify({'status': 'success', 'message': 'App is running'}), 200
+
 @app.route('/api/flights/search', methods=['POST'])
 def search_flights():
     """
-    Search for flights based on user input.
-
+    Search for flights based on user input and store unique flights.
+    
     Expected JSON Input:
         - origin (str): Origin IATA code
         - destination (str): Destination IATA code
         - departureDate (str): Departure date (YYYY-MM-DD)
-        - adults (int): Number of adults
-        - maxPrice (int): Maximum price
-
+        - returnDate (str, optional): Return date (YYYY-MM-DD)
+        - adults (int, optional): Number of adults (default: 1)
+    
     Returns:
         JSON response with flight details.
     """
+    data = request.get_json()
+    origin = data.get('origin')
+    destination = data.get('destination')
+    departure_date = data.get('departureDate')
+    return_date = data.get('returnDate')
+    adults = data.get('adults', 1)
     try:
-        # Parse user input from JSON
-        data = request.get_json()
-        origin = data.get('origin')
-        destination = data.get('destination')
-        departure_date = data.get('departureDate')
-        adults = data.get('adults', 1)  # Default to 1 adult if not specified
-        max_price = data.get('maxPrice', None)
+        if not all([origin, destination, departure_date]):
+            app.logger.warning("Missing required fields in flight search request")
+            return jsonify({'error': 'origin, destination, and departureDate are required'}), 400
 
-        # Validate required fields
-        if not origin or not destination or not departure_date:
-            return jsonify({'Error': 'origin, destination, and departureDate are required'}), 400
-
-        access_token = fetch_token()
-
-        response = get_cheapest_destinations(access_token, origin, destination, departure_date, adults, max_price)
-
-        flights = extract_flight_details(response)
+        flights = flight_model.search_flights(origin, destination, departure_date, return_date, adults)
         return jsonify({'status': 'success', 'flights': flights}), 200
-    
+
     except Exception as e:
         app.logger.error(f"Error during flight search: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/flights', methods=['GET'])
+def get_all_flights():
+    """
+    Retrieve all stored flight data from memory.
+    
+    Returns:
+        JSON response with flight details.
+    """
+    flights = flight_model.get_flights()
+    return jsonify({'status': 'success', 'flights': flights}), 200
+
+@app.route('/api/flights/clear', methods=['POST'])
+def clear_flights():
+    """
+    Clear all stored flight data from memory.
+    
+    Returns:
+        JSON response confirming the operation.
+    """
+    flight_model.clear_flights()
+    return jsonify({'status': 'success', 'message': 'All flights have been cleared'}), 200
+
+@app.route('/api/flights/airline/<airline_code>', methods=['GET'])
+def get_flights_by_airline(airline_code):
+    """
+    Retrieve flights from a specific airline.
+    
+    Args:
+        airline_code (str): IATA code of the airline.
+    
+    Returns:
+        JSON response with filtered flight details.
+    """
+    app.logger.info(f"Retrieving flights for airline: {airline_code}")
+    filtered_flights = [
+        flight for flight in flight_model.get_flights()
+        if flight['airline'] == airline_code.upper()
+    ]
+    return jsonify({'status': 'success', 'flights': filtered_flights}), 200
+
+@app.route('/api/flights/price', methods=['GET'])
+def get_flights_by_price():
+    """
+    Retrieve flights within a specific price range.
+    
+    Query Parameters:
+        - min (float): Minimum price
+        - max (float): Maximum price
+    
+    Returns:
+        JSON response with filtered flight details.
+    """
+    min_price = request.args.get('min', type=float)
+    max_price = request.args.get('max', type=float)
+    
+    app.logger.info(f"Retrieving flights with price between {min_price} and {max_price}")
+    
+    if min_price is None or max_price is None:
+        app.logger.warning("Missing min or max price parameters")
+        return jsonify({'error': 'min and max price parameters are required'}), 400
+    
+    filtered_flights = [
+        flight for flight in flight_model.get_flights()
+        if min_price <= float(flight['price'].split()[0]) <= max_price
+    ]
+    return jsonify({'status': 'success', 'flights': filtered_flights}), 200
+
+@app.route('/api/flights/origin/<origin_code>', methods=['GET'])
+def get_flights_by_origin(origin_code):
+    """
+    Retrieve flights departing from a specific origin.
+    
+    Args:
+        origin_code (str): IATA code of the origin airport.
+    
+    Returns:
+        JSON response with filtered flight details.
+    """
+    app.logger.info(f"Retrieving flights from origin: {origin_code}")
+    filtered_flights = [
+        flight for flight in flight_model.get_flights()
+        if flight['origin'] == origin_code.upper()
+    ]
+    return jsonify({'status': 'success', 'flights': filtered_flights}), 200
+
 # Initialize database
 with app.app_context():
     db.create_all()
+
+if __name__ == '__main__':
+    app.run(debug=True)
