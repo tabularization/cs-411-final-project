@@ -1,12 +1,16 @@
+import logging
 import requests
 from dotenv import load_dotenv
 import os
+import json
 
 load_dotenv()
 
-url = "https://test.api.amadeus.com/v1"
-api_key = os.getenv("api_key")
-api_secret = os.getenv("api_secret")
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+
+API_KEY = os.getenv("API_KEY")
+API_SECRET = os.getenv("API_SECRET")
 
 def fetch_token():
     """
@@ -15,31 +19,49 @@ def fetch_token():
     Returns:
         str: Bearer token for API authentication.
     """
-    token_url = f"{url}/security/oauth2/token"
+    if not API_KEY or not API_SECRET:
+        logger.error("API_KEY and API_SECRET must be set in environment variables.")
+        raise EnvironmentError("API_KEY and API_SECRET not found.")
+
+    token_url = "https://test.api.amadeus.com/v1/security/oauth2/token"
     headers = {"Content-Type": "application/x-www-form-urlencoded"}
     data = {
         "grant_type": "client_credentials",
-        "client_id": api_key,
-        "client_secret": api_secret
+        "client_id": API_KEY,
+        "client_secret": API_SECRET
     }
-    response = requests.post(token_url, headers=headers, data=data)
-    response.raise_for_status()
-    return response.json()['access_token']
 
-def get_cheapest_destinations(access_token, origin, destination, departure_date, adults, max_price):
+    try:
+        logger.info("Fetching access token from Amadeus API")
+        response = requests.post(token_url, headers=headers, data=data)
+        response.raise_for_status()
+        token_data = response.json()
+        access_token = token_data.get('access_token')
+
+        if not access_token:
+            logger.error("Access token not found in response.")
+            raise ValueError("Access token not found.")
+
+        logger.info("Access token successfully retrieved")
+        return access_token
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to fetch access token: {e}")
+        raise
+
+def get_flight_offers(access_token, origin, destination, departure_date, return_date=None, adults=1):
     """
-    Retrieve cheapest flight offers from the Amadeus API.
+    Retrieve flight offers from the Amadeus API, restricted to specified popular airlines.
 
     Args:
         access_token (str): Bearer token.
         origin (str): IATA code for departure location.
         destination (str): IATA code for destination.
         departure_date (str): Date in YYYY-MM-DD format.
-        adults (int): Number of adult passengers.
-        max_price (int): Max price per passenger.
+        return_date (str, optional): Return date in YYYY-MM-DD format. Defaults to None.
+        adults (int): Number of adult passengers. Defaults to 1.
 
     Returns:
-        dict: JSON response containing flight offers.
+        dict: Raw JSON response containing flight offers.
     """
     url = "https://test.api.amadeus.com/v2/shopping/flight-offers"
     headers = {"Authorization": f"Bearer {access_token}"}
@@ -48,30 +70,20 @@ def get_cheapest_destinations(access_token, origin, destination, departure_date,
         "destinationLocationCode": destination,
         "departureDate": departure_date,
         "adults": adults,
-        "maxPrice": max_price
+        "currencyCode": "USD",
+        "max": 50,
     }
-    response = requests.get(url, headers=headers, params=params)
-    response.raise_for_status()
-    return response.json()
 
-def extract_flight_details(response):
-    """
-    Extract airline, origin, destination, and price from flight offers.
+    if return_date:
+        params["returnDate"] = return_date
 
-    Args:
-        response (dict): API response containing flight offers.
-
-    Returns:
-        list[dict]: List of flights with keys: 'airline', 'origin', 'destination', 'price'.
-    """
-    flights = []
-    for offer in response["data"]:
-        segments = offer["itineraries"][0]["segments"]
-        airline = response["dictionaries"]["carriers"].get(segments[0]["carrierCode"], segments[0]["carrierCode"])
-        flights.append({
-            "airline": airline,
-            "origin": segments[0]["departure"]["iataCode"],
-            "destination": segments[-1]["arrival"]["iataCode"],
-            "price": f"{offer['price']['total']} {offer['price']['currency']}"
-        })
-    return flights
+    try:
+        logger.info(f"Fetching flight offers from {origin} to {destination} on {departure_date}"
+                    + (f" returning on {return_date}" if return_date else ""))
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        logger.info("Flight offers successfully retrieved")
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Failed to fetch flight offers: {e}")
+        raise
