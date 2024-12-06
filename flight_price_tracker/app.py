@@ -1,4 +1,5 @@
 from dotenv import load_dotenv
+import os
 from flask import Flask, jsonify, make_response, Response, request
 # from flask_cors import CORS
 
@@ -15,9 +16,10 @@ from flight_price_tracker.models.flight_model import FlightModel
 
 # Load environment variables from .env file
 load_dotenv()
+DB_PATH = os.getenv("DB_PATH")
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///users.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_PATH}'
 db.init_app(app)
 
 # Initialize the FlightModel
