@@ -13,6 +13,7 @@ API_KEY = os.getenv("API_KEY")
 API_SECRET = os.getenv("API_SECRET")
 
 def fetch_token():
+    logger.info(API_KEY, API_SECRET)
     """
     Fetch an access token from the Amadeus API.
 

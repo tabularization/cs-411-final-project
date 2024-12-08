@@ -4,7 +4,7 @@ from flask import Flask, jsonify, make_response, Response, request
 # from flask_cors import CORS
 
 from flight_price_tracker.models import flight_model
-from flight_price_tracker.models.price_model import PriceModel
+
 from flight_price_tracker.models.login_model import User, db
 
 from flight_price_tracker.utils.sql_utils import check_database_connection, check_table_exists
@@ -310,4 +310,4 @@ with app.app_context():
     db.create_all()
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
