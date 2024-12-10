@@ -181,7 +181,7 @@ CREATE_DB=true
   - `flights` (List of Objects): Flights matching the airline code.
 - **Example Request:**
   ```bash
-  curl -X GET "http://127.0.0.1:5000/api/flights/airline?airline_code=AA"
+  curl -X GET http://127.0.0.1:5000/api/flights/airline?airline_code=AA
   ```
 - **Example Response:**
   ```json
@@ -214,7 +214,7 @@ CREATE_DB=true
   - `flights` (List of Objects): Flights within the price range.
 - **Example Request:**
   ```bash
-  curl -X GET "http://127.0.0.1:5000/api/flights/price?min=200&max=500"
+  curl -X GET http://127.0.0.1:5000/api/flights/price?min=200&max=500
   ```
 - **Example Response:**
   ```json
@@ -246,7 +246,7 @@ CREATE_DB=true
   - `flights` (List of Objects): Flights departing from the origin airport.
 - **Example Request:**
   ```bash
-  curl -X GET "http://127.0.0.1:5000/api/flights/origin?origin_code=JFK"
+  curl -X GET http://127.0.0.1:5000/api/flights/origin?origin_code=JFK
   ```
 - **Example Response:**
   ```json
