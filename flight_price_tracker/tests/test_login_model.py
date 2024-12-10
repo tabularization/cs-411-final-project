@@ -42,8 +42,9 @@ def test_create_duplicate_user(session, sample_user):
 def test_create_user_empty_password(session, sample_user):
     """Test creating a user with an empty password."""
     sample_user["password"] = ""
-    with pytest.raises(Exception):
+    with pytest.raises(ValueError, match="Password cannot be empty"):
         User.create_user(**sample_user)
+
 
 
 ##########################################################

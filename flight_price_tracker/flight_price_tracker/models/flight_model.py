@@ -20,6 +20,7 @@ class FlightModel:
         """
         Fetch flights from the Amadeus API and store unique flights.
 
+
         Args:
             origin (str): Origin airport IATA code.
             destination (str): Destination airport IATA code.
@@ -27,12 +28,17 @@ class FlightModel:
             return_date (str, optional): Return date (YYYY-MM-DD). Defaults to None.
             adults (int, optional): Number of travelers. Defaults to 1.
 
+
         Returns:
             list[dict]: List of newly added unique flights.
         """
+        if not origin or not destination:
+            raise ValueError("Origin and destination must be provided")
+   
         logger.info(f"Searching flights from {origin} to {destination} on {departure_date}" +
                     (f" returning on {return_date}" if return_date else "") +
                     f" for {adults} adult(s)")
+
 
         try:
             access_token = fetch_token()
@@ -40,10 +46,12 @@ class FlightModel:
             unique_flights = set()
             new_flights = []
 
+
             for offer in response.get("data", []):
                 airline = offer["itineraries"][0]["segments"][0]["carrierCode"]
                 price = float(offer["price"]["grandTotal"])
                 flight_key = (airline, price)
+
 
                 if flight_key not in unique_flights:
                     unique_flights.add(flight_key)
@@ -57,13 +65,16 @@ class FlightModel:
                     }
                     new_flights.append(flight)
 
+
             self.flights.extend(new_flights)
             logger.info(f"Added {len(new_flights)} new flights to memory")
             return new_flights
 
+
         except Exception as e:
             logger.error(f"Failed to search flights: {e}")
             raise
+
 
     def get_flights(self):
         """
