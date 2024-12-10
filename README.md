@@ -6,27 +6,51 @@ The **Flight Price Tracker** application provides an interface for managing and 
 ---
 
 ## **Features**
-- Fetch real-time flight offers using the Amadeus API.
+- Fetch real-time flight offers using the Amadeus API (https://developers.amadeus.com/).
 - Store and manage flight data.
 - Filter flights by:
   - Airline
   - Price range
-  - Origin airport
+  - Origin airport.
 - Clear stored flight data.
 
 ---
 
 ## **Environment Variables**
-To run this application, the following environment variables must be defined:
+To run this application, define the following variables in your `.env` file:
 
-- **`API_KEY`**: Your Amadeus API key.
-- **`API_SECRET`**: Your Amadeus API secret.
-
-Create a `.env` file in the root directory and add the following:
 ```env
 API_KEY=your_amadeus_api_key
 API_SECRET=your_amadeus_api_secret
+DB_PATH=/app/db/flight_price_tracker.db
+SQL_CREATE_TABLE_PATH=/app/sql/create_flight_table.sql
+CREATE_DB=true
 ```
+
+- **`API_KEY`**: Your Amadeus API key.
+- **`API_SECRET`**: Your Amadeus API secret.
+- **`DB_PATH`**: Path to the SQLite database file (used within the container).
+- **`SQL_CREATE_TABLE_PATH`**: Path to the SQL script for creating the required tables.
+- **`CREATE_DB`**: Set to `true` to initialize the database if it doesn't exist.
+
+---
+
+## **Setup and Run Using Docker**
+
+1. **Build and Run the Docker Container**
+   Use the provided `run_docker.sh` script to build and run the application in a container:
+   ```bash
+   ./run_docker.sh
+   ```
+   
+2. **Run Smoke Tests**
+   Use the `smoke_test.sh` script to validate routes:
+   ```bash
+   ./smoke_test.sh
+   ```
+
+---
+
 # Routes Documentation
 
 ## 1. Health Check
