@@ -19,7 +19,7 @@ load_dotenv()
 DB_PATH = os.getenv("DB_PATH")
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///{DB_PATH}'
+app.config['SQLALCHEMY_DATABASE_URI'] = f'sqlite:///flight_price_tracker.db'
 db.init_app(app)
 
 # Initialize the FlightModel
