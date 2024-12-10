@@ -141,8 +141,8 @@ CREATE_DB=true
   - `flights` (List of Objects): Newly fetched flights.
 - **Example Request:**
   ```bash
-  curl -X POST http://127.0.0.1:5000/api/flights/search \\
-       -H "Content-Type: application/json" \\
+  curl -X POST http://127.0.0.1:5000/api/flights/search \
+       -H "Content-Type: application/json" \
        -d '{
              "origin": "JFK",
              "destination": "LAX",
